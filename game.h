@@ -23,8 +23,9 @@ public:
     bool contact(Object&, Object&);
     void render();
     int  gameLoop();
+    void heartBeat();
     void moveEnemyClose(Object&, Object&);
-    void setLocation(Object&);
+    void randLocation(Object&);
     int  getScore();
     int  getLevel();
     void testCollision(Object&);

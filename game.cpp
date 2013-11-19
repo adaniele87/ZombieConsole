@@ -3,10 +3,11 @@
 #include "game.h"
 #include "animations.h"
 
+#define HEARTBEAT_THEME 0
 
 Game::Game(int enemies)
 {
-    object = new Object[2+enemies];     // create player, oat, and enemies
+    object = new Object[2+enemies];      // create player, oat, and enemies
     object[0].x(0);
     object[0].y(0);
 
@@ -21,7 +22,12 @@ Game::Game(int enemies)
     ticks       = GetTickCount();
 
     srand(ticks);                        // set random start locations for oat and enemies
-    for (int i = 1; i < 2+enemies; i++) setLocation(object[i]);
+    for (int i = 1; i < 2+enemies; i++)
+    {
+        randLocation(object[i]);
+        if(object[i].x() < 15) object[i].x(15);
+        if(object[i].y() < 15) object[i].y(15);
+    }
 }
 
 Game::~Game()
@@ -62,7 +68,7 @@ int Game::gameLoop()
         if (nextLevel > 1000)
         {
             levelUp();
-            nextLevel = 0;
+            nextLevel -= 1000;
         }
 
         // input and output of user and enemies
@@ -87,7 +93,7 @@ int Game::gameLoop()
         {
             ScoreDisplay.x() = object[1].x();
             ScoreDisplay.y() = object[1].y();
-            setLocation(object[1]);
+            randLocation(object[1]);
             score+=oatpoints;
             nextLevel += oatpoints;
             if (oatWorth > MAXOATWORTH) console.alarm();
@@ -120,6 +126,11 @@ int Game::gameLoop()
 
         // change counter values
         if (oatpoints > 0) oatpoints--;
+        else
+        {
+            randLocation(object[1]);
+            oatpoints = oatWorth;
+        }
         moveEnemy++;
         movePlayer++;
         nextRandomMove++;
@@ -136,6 +147,17 @@ int Game::gameLoop()
 
 int Game::getScore() { return score; }
 int Game::getLevel() { return level; }
+
+void Game::heartBeat()
+{
+    static int i = 0;
+    int sleepers[2] = {200,700};
+
+    i = !i;
+
+    Beep(100,100);
+    Sleep(sleepers[i]);
+}
 
 void Game::levelUp()
 {
@@ -163,7 +185,7 @@ void Game::render()
     object[0].draw(character);
     for (int i = 2; i < objects; object[i++].draw(zombie));
 }
-void Game::setLocation(Object& object)
+void Game::randLocation(Object& object)
 {
     object.x(rand()%cols);
     object.y(rand()%rows);
@@ -183,10 +205,14 @@ void Game::titleScreen()
     Object pStart(15, 18);
     titleScreen.Frame(1);
     int i                = 0;
-    int pressStartEffect = 50;
+    int pressStartEffect = 0;
+
+    if (HEARTBEAT_THEME) pressStartEffect = 3;
+    else pressStartEffect = 50;
+
     int done = false;
 
-    while (titleScreen.Frame() < 57) // draw zoom animation of title
+    while (titleScreen.Frame() < 57 && !done) // draw zoom animation of title
     {
         ticks = GetTickCount();
         console.clear();
@@ -194,11 +220,17 @@ void Game::titleScreen()
         titleScreen.Frame(titleScreen.Frame()+1);
         titleScreen.x(titleScreen.x()+1);
 
+        if (GetKeyState(VK_RETURN) & 0x80) done = true;
+
         if (1000/FPS > GetTickCount()-ticks)
         {
             Sleep(1000/FPS-(GetTickCount()-ticks));
         }
     }
+
+    done = false;
+    console.clear();
+    if (!HEARTBEAT_THEME) Sleep(200);
 
     titleScreen.x(10);
     titleScreen.y(5);
@@ -207,6 +239,8 @@ void Game::titleScreen()
     while (!done)
     {
         ticks = GetTickCount();
+
+        if (HEARTBEAT_THEME) heartBeat();
 
         if (i == 0)
         {
@@ -233,10 +267,10 @@ void Game::titleScreen()
 
 bool Game::tooClose(Object& player, Object& enemy)
 {
-    if ((player.x() > enemy.x() - 20) &&
-        (player.x()+1 < enemy.x() + 20) &&
-        (player.y() > enemy.y() - 20) &&
-        (player.y()+1 < enemy.y() + 20))
+    if ((player.x() > enemy.x() - 15) &&
+        (player.x()+1 < enemy.x() + 15) &&
+        (player.y() > enemy.y() - 15) &&
+        (player.y()+1 < enemy.y() + 15))
     {
         moveEnemyClose(player, enemy);
         return true;
